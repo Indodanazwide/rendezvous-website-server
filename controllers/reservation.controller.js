@@ -162,13 +162,13 @@ export const getReservationById = async (req, res) => {
 };
 
 export const updateReservation = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Get the reservation ID from the URL parameters
     const { user, name, surname, email, time, guestNumber, tableNumber, status, specialMessage } = req.body;
 
     try {
         // Find the reservation to update
         const reservation = await Reservation.findById(id);
-
+        
         if (!reservation) {
             return res.status(404).json({ message: 'Reservation not found' });
         }
@@ -198,16 +198,27 @@ export const updateReservation = async (req, res) => {
         reservation.email = email;
         reservation.time = time;
         reservation.guestNumber = guestNumber;
-        reservation.tableNumber = tableNumber;
+        reservation.tableNumber = tableNumber; // This should be updated to reflect the new table
         reservation.status = status;
         reservation.specialMessage = specialMessage;
 
         await reservation.save();
 
-        // Update the table's current reservation
-        table.isAvailable = false;
-        table.currentReservation = reservation._id;
-        await table.save();
+        // Update the table's current reservation only if the table has changed
+        if (reservation.tableNumber !== tableNumber) {
+            // Make the old table available again
+            const oldTable = await Table.findOne({ tableNumber: reservation.tableNumber });
+            if (oldTable) {
+                oldTable.isAvailable = true;
+                oldTable.currentReservation = null;
+                await oldTable.save();
+            }
+
+            // Update the new table's availability
+            table.isAvailable = false;
+            table.currentReservation = reservation._id;
+            await table.save();
+        }
 
         res.status(200).json({ message: 'Reservation updated successfully!', reservation });
     } catch (error) {

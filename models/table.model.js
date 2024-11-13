@@ -36,7 +36,8 @@ const tableSchema = new mongoose.Schema({
         ref: 'Reservation',
         default: null
     }
-}, {
+}, 
+{
     timestamps: true 
 })
 
